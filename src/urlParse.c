@@ -1,5 +1,4 @@
 #include "include/urlParse.h"
-#include "include/client.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,17 +105,11 @@ char *create_http_response(char *request) {
                  "Bichota C\r\n"
                  "</body>\r\n"
                  "</html>\r\n";
-      // implementa proxy
-    } else if (is_proxy(req.params) == 0) {
-      response = send_get(req.params);
-      // implementacion de proxy antigua
-    } else if (get_query(req.params, data) == 0) {
-      response = send_get(req.params);
     } else {
       response = "HTTP/1.1 418 I'm a teapot\r\n";
     }
   } else {
-    response = "HTTP/1.1 418 I'm a teapot\r\n";
+    response = "HTTP/1.1 404 Not found\r\n";
   }
 
   free(data);

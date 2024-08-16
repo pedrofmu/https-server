@@ -1,4 +1,3 @@
-#include "include/client.h"
 #include "include/urlParse.h"
 
 #include <netinet/in.h>
@@ -30,8 +29,6 @@ int create_srv_socket(char port[]) {
 
   // Bindea el puerto
   if ((bind(socket_fd, (struct sockaddr *)&addr, sizeof(addr))) < 0) {
-    printf("asdf");
-
     return EXIT_FAILURE;
   }
 
