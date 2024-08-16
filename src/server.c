@@ -1,4 +1,4 @@
-#include "include/create-respons.h"
+#include "include/create_respons.h"
 #include "include/urlParse.h"
 
 #include <netinet/in.h>
@@ -9,6 +9,8 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
+
+char* working_directory = "/srv/";
 
 // crea el socket fd que representa al servidor y que hace lisen
 int create_srv_socket(char port[]) {
@@ -64,7 +66,6 @@ void *client_handler(void *arg) {
 int main(int argc, char *argv[]) {
   int opt;
   char *port = "6890";
-  char *folder = "/";
 
   // Procesa los argumentos de línea de comandos
   while ((opt = getopt(argc, argv, "p:f:")) != -1) {
@@ -73,7 +74,7 @@ int main(int argc, char *argv[]) {
       port = optarg;
       break;
     case 'f':
-      folder = optarg;
+      working_directory = optarg;
       break;
     default: /* '?' */
       fprintf(stderr, "Uso: %s [-p puerto] [-f carpeta]\n", argv[0]);
@@ -86,7 +87,6 @@ int main(int argc, char *argv[]) {
   // aceptar conexiones entrantes
   listen(srv_socket, 100);
 
-  // acepta conexiones entrantes
   while (1) {
     int *client_socket = malloc(sizeof(int));
 

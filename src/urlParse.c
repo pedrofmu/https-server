@@ -1,6 +1,5 @@
 #include "include/urlParse.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -58,21 +57,3 @@ struct http_request parse_request(char *request) {
 
   return parsed_request;
 };
-
-int get_query(char *values, char *data) {
-  printf("%s\n", values);
-  if (strlen(values) <= 3)
-    return -1;
-
-  int i = 0;
-  while (strncmp(&values[i], "?q=", 3) != 0) {
-    i++;
-    if (i >= strlen(values) - 3)
-      return -1;
-  }
-
-  strncpy(data, &values[i + 3], strlen(values) - i - 3);
-  data[strlen(values) - i - 3] = '\0';
-
-  return 0;
-}
