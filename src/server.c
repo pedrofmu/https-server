@@ -3,6 +3,7 @@
 
 #include <netinet/in.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,10 @@
 #include <time.h>
 #include <unistd.h>
 
-char* working_directory = "/srv/";
+char *working_directory = "/srv/";
+
+volatile sig_atomic_t stop = 0;
+void handle_sigint(int sig) { stop = 1; }
 
 // crea el socket fd que representa al servidor y que hace lisen
 int create_srv_socket(char port[]) {
@@ -67,6 +71,9 @@ int main(int argc, char *argv[]) {
   int opt;
   char *port = "6890";
 
+  // Maneja la señal SIGINT
+  signal(SIGINT, handle_sigint);
+
   // Procesa los argumentos de línea de comandos
   while ((opt = getopt(argc, argv, "p:f:")) != -1) {
     switch (opt) {
@@ -87,15 +94,17 @@ int main(int argc, char *argv[]) {
   // aceptar conexiones entrantes
   listen(srv_socket, 100);
 
-  while (1) {
+  while (!stop) {
     int *client_socket = malloc(sizeof(int));
 
     *client_socket = accept(srv_socket, (struct sockaddr *)NULL, NULL);
 
     pthread_t client_thread;
     pthread_create(&client_thread, NULL, client_handler, (void *)client_socket);
+    pthread_detach(client_thread);
   }
 
+  printf("Servidor detendido de forma satisfactoria :)\n");
   close(srv_socket);
 
   return EXIT_SUCCESS;
