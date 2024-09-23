@@ -1,7 +1,9 @@
-#include "include/create_respons.h"
-#include "include/parser.h"
+#include "create_respons.h"
+#include "parser.h"
 
 #include <netinet/in.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -15,6 +17,8 @@ char *working_directory = "/srv/";
 
 volatile sig_atomic_t stop = 0;
 void handle_sigint(int sig) { stop = 1; }
+
+SSL_CTX *ctx;
 
 // crea el socket fd que representa al servidor y que hace lisen
 int create_srv_socket(char port[]) {
@@ -43,25 +47,70 @@ int create_srv_socket(char port[]) {
   return socket_fd;
 }
 
+// Crea un contexto SSL
+SSL_CTX *create_context() {
+  const SSL_METHOD *method;
+  SSL_CTX *ctx;
+
+  method = TLS_server_method();
+
+  ctx = SSL_CTX_new(method);
+  if (!ctx) {
+    perror("Unable to create SSL context");
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+  }
+
+  return ctx;
+}
+
+// Añade las claves al contexto ssl (debes incluir las claves en la misma
+// carpeta en la que se encuentra el binario)
+void configure_context(SSL_CTX *ctx) {
+  /* Set the key and cert */
+  if (SSL_CTX_use_certificate_file(ctx, "cert.pem", SSL_FILETYPE_PEM) <= 0) {
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+  }
+
+  if (SSL_CTX_use_PrivateKey_file(ctx, "key.pem", SSL_FILETYPE_PEM) <= 0) {
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+  }
+}
+
 // gestiona el nuevo socket de comunciacion creado para el cliente
 void *client_handler(void *arg) {
   int *client_socket = (int *)arg;
+
+  SSL *ssl = SSL_new(ctx);
 
   char request_buffer[1024] = {0};
   int r_len = 0;
 
   char *response;
 
-  r_len = read(*client_socket, request_buffer, sizeof(request_buffer));
+  SSL_set_fd(ssl, *client_socket);
 
-  if (r_len < 0)
+  if (SSL_accept(ssl) <= 0)
     return NULL;
 
-  response = create_http_response(request_buffer);
+  r_len = SSL_read(ssl, request_buffer, sizeof(request_buffer));
+  if (r_len <= 0) {
+    SSL_free(ssl);
+    close(*client_socket);
+    free(client_socket);
+    return NULL;
+  }
 
-  write(*client_socket, response, strlen(response));
+  response = create_http_response(request_buffer);
+  SSL_write(ssl, response, strlen(response));
+
+  SSL_shutdown(ssl);
+  SSL_free(ssl);
 
   close(*client_socket);
+  free(client_socket);
 
   return NULL;
 }
@@ -72,7 +121,11 @@ int main(int argc, char *argv[]) {
   char *port = "6890";
 
   // Maneja la señal SIGINT
-  signal(SIGINT, handle_sigint);
+  struct sigaction sa;
+  sa.sa_handler = handle_sigint;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sigaction(SIGINT, &sa, NULL);
 
   // Procesa los argumentos de línea de comandos
   while ((opt = getopt(argc, argv, "p:f:")) != -1) {
@@ -89,6 +142,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  ctx = create_context();
+  configure_context(ctx);
+
   int srv_socket = create_srv_socket(port);
 
   // aceptar conexiones entrantes
@@ -98,6 +154,10 @@ int main(int argc, char *argv[]) {
     int *client_socket = malloc(sizeof(int));
 
     *client_socket = accept(srv_socket, (struct sockaddr *)NULL, NULL);
+    if (*client_socket < 0) {
+      free(client_socket);
+      continue;
+    }
 
     pthread_t client_thread;
     pthread_create(&client_thread, NULL, client_handler, (void *)client_socket);

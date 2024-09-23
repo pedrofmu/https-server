@@ -1,6 +1,6 @@
-#include "include/create_respons.h"
-#include "include/file_manager.h"
-#include "include/parser.h"
+#include "create_respons.h"
+#include "file_manager.h"
+#include "parser.h"
 
 #include <bits/types/struct_iovec.h>
 #include <stdio.h>
