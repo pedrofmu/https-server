@@ -2,3 +2,5 @@
 char* get_mime_type(char* filepath);
 
 char* obtain_file_content(char* filepath);
+
+int write_file(char *path, char *data);
