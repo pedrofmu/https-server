@@ -35,6 +35,7 @@ struct http_request *parse_request(const char *raw_data) {
     return NULL;
   }
 
+  // saltar hasta los headers
   int i = 0;
   while (strncmp(&raw_data[i], "\r\n", 2)) {
     i++;
@@ -50,19 +51,20 @@ struct http_request *parse_request(const char *raw_data) {
     first_header = NULL;
     working_header = NULL;
   }
+
+  // parsea los headers
   while (i < data_len - 2 && strncmp(&data_modifiable[i], "\r\n", 2) != 0) {
     char *header_name = strtok(&data_modifiable[i], ":");
 
     char *header_value =
         strtok(&data_modifiable[i + strlen(header_name) + 2], "\r");
 
-    working_header->name = header_name;
-    working_header->value = header_value;
+    working_header->name = strdup(header_name);
+    working_header->value = strdup(header_value);
 
-    while (i < data_len - 2 && strncmp(&raw_data[i], "\r\n", 2) != 0) {
+    // saltar hasta el siguiente header
+    while (i < data_len - 2 && strncmp(&raw_data[i], "\r\n", 2) != 0) 
       i++;
-    }
-
     i += 2;
 
     if (strncmp(&data_modifiable[i], "\r\n", 2) == 0)
@@ -72,18 +74,21 @@ struct http_request *parse_request(const char *raw_data) {
     working_header = working_header->next_header;
   }
 
+  // body
   char *body;
   if (i + 2 > strlen(&data_modifiable[i])) {
-    body = &data_modifiable[i + 2];
+    body = strdup(&data_modifiable[i + 2]);
   } else {
     body = "";
   }
 
   struct http_request *request = malloc(sizeof(struct http_request));
-  request->method = method;
-  request->path = path;
+  request->method = strdup(method);
+  request->path = strdup(path);
   request->headers = first_header;
   request->body = body;
+
+  free(data_modifiable);
 
   return request;
 }
@@ -93,13 +98,20 @@ void free_request(struct http_request *req) {
     return;
   }
 
+  // Liberar los headers
   struct http_header *working_header = req->headers;
   struct http_header *next_header;
   while (working_header != NULL) {
     next_header = working_header->next_header;
-    free(working_header);
+    free(working_header->name);
+    free(working_header->value);
+    free(working_header);   
     working_header = next_header;
   }
 
+  // Liberar el resto de la estructura
+  free(req->method);
+  free(req->path);
+  free(req->body);
   free(req);
 }

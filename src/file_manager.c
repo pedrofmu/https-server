@@ -54,7 +54,7 @@ char *get_mime_type(char *filepath) {
   int dot_point = -1;
   int i = 0;
 
-  // Encuentra la posición del último punto en el filepath
+  // encuentra la posición del último punto en el filepath
   while (filepath[i] != '\0') {
     if (filepath[i] == '.')
       dot_point = i;
@@ -65,15 +65,14 @@ char *get_mime_type(char *filepath) {
     i++;
   }
 
-  // Si no se encuentra un punto, devolver un tipo MIME genérico
+  // si no se encuentra un punto, devolver un tipo MIME genérico
   if (dot_point == -1) {
     return "application/octet-stream";
   }
 
-  // Obtén un puntero al comienzo de la extensión
   char *extension = &filepath[dot_point];
 
-  // Comparar la extensión
+  // comparar la extensión
   if (strcmp(extension, ".html") == 0) {
     return "text/html";
   } else if (strcmp(extension, ".css") == 0) {

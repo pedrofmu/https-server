@@ -89,11 +89,13 @@ void *client_handler(void *arg) {
 
   char *response;
 
+  // empieza el SSL hadshake
   SSL_set_fd(ssl, *client_socket);
 
   if (SSL_accept(ssl) <= 0)
     return NULL;
 
+  // lee el socket SSL
   r_len = SSL_read(ssl, request_buffer, sizeof(request_buffer));
   if (r_len <= 0) {
     SSL_free(ssl);
@@ -141,6 +143,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // configura el contexto SSL
   ctx = create_context();
   configure_context(ctx);
 
@@ -149,6 +152,7 @@ int main(int argc, char *argv[]) {
   // aceptar conexiones entrantes
   listen(srv_socket, 100);
 
+  // bucle de escucha
   while (!stop) {
     int *client_socket = malloc(sizeof(int));
 

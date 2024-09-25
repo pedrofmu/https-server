@@ -1,6 +1,6 @@
 #include "create_respons.h"
 #include "file_manager.h"
-#include "parser.h" 
+#include "parser.h"
 
 #include <bits/types/struct_iovec.h>
 #include <stdio.h>
@@ -9,7 +9,7 @@
 
 extern char *working_directory;
 
-char *get_method(struct http_request* req) {
+char *get_method(struct http_request *req) {
   // Obtiene el archivo basándose en el path
   char *file_content = obtain_file_content(req->path);
   if (file_content == NULL) {
@@ -55,19 +55,19 @@ char *get_method(struct http_request* req) {
   return response;
 }
 
-char *put_method(struct http_request* req) {
+char *put_method(struct http_request *req) {
   char *respons = malloc(1023 * sizeof(char));
 
   if (write_file(req->path, req->body) > 0) {
-    // Sucess
     snprintf(respons, 1023 * sizeof(char),
              "HTTP/1.1 201 Created\r\n"
-             "Content-Location: /new.html\r\n\r\n");
+             "Content-Location: %s\r\n\r\n",
+             req->path);
   } else {
-    // Fail
     snprintf(respons, 1023 * sizeof(char),
              "HTTP/1.1 204 No Content\r\n"
-             "Content-Location: /new.html\r\n\r\n");
+             "Content-Location: %s\r\n\r\n",
+             req->path);
   }
 
   return respons;
@@ -77,14 +77,16 @@ char *create_http_response(char *request) {
   printf("%s\n", request);
   struct http_request *req = parse_request(request);
 
+  char *respons;
   // Si es el metodo GET devolver datos, si no dar error 404
   if (strcmp(req->method, "GET") == 0) {
-    return get_method(req);
+    respons = get_method(req);
   } else if (strcmp(req->method, "PUT") == 0) {
-    return put_method(req);
+    respons = put_method(req);
   } else {
-    return strdup("HTTP/1.1 404 Not found\r\n");
+    respons = strdup("HTTP/1.1 404 Not found\r\n");
   }
 
   free_request(req);
+  return respons;
 }
