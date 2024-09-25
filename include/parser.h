@@ -12,4 +12,6 @@ struct http_request {
   char *body;
 };
 
-struct http_request parse_request(char* request);
+struct http_request *parse_request(const char* request);
+
+void free_request(struct http_request* req);

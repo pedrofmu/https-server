@@ -18,65 +18,88 @@ struct http_header *create_header() {
   return header;
 }
 
-struct http_request parse_request(char *raw_data) {
-  // method
+struct http_request *parse_request(const char *raw_data) {
+  // obtener el method
+  size_t data_len = strlen(raw_data) + 1;
+  char *data_modifiable = malloc(data_len);
+  strcpy(data_modifiable, raw_data);
+
+  char *method = strtok(data_modifiable, " ");
+  if (method == NULL) {
+    return NULL;
+  }
+
+  // obtener el path
+  char *path = strtok(NULL, " ");
+  if (path == NULL || path[0] != '/') {
+    return NULL;
+  }
+
   int i = 0;
-  while (raw_data[i] != ' ') {
+  while (strncmp(&raw_data[i], "\r\n", 2)) {
     i++;
   }
+  i += 2;
 
-  char *method = (char *)malloc(i + 1);
-  strncpy(method, raw_data, i);
-  method[i] = '\0';
-
-  // path
-  int j = i + 1;
-  while (raw_data[j] != ' ') {
-    j++;
+  struct http_header *first_header;
+  struct http_header *working_header;
+  if (i < data_len - 2 && strncmp(&raw_data[i], "\r\n", 2) != 0) {
+    first_header = create_header();
+    working_header = first_header;
+  } else {
+    first_header = NULL;
+    working_header = NULL;
   }
+  while (i < data_len - 2 && strncmp(&data_modifiable[i], "\r\n", 2) != 0) {
+    char *header_name = strtok(&data_modifiable[i], ":");
 
-  char *path = (char *)malloc(j - i - 1);
-  strncpy(path, &raw_data[i + 1], j - i - 1);
-  path[j - i - 1] = '\0';
+    char *header_value =
+        strtok(&data_modifiable[i + strlen(header_name) + 2], "\r");
 
-  // header
-  struct http_header *first_header = create_header();
-  while (raw_data[i] != '\r') {
-    i++;
-  }
+    working_header->name = header_name;
+    working_header->value = header_value;
 
-  i += 1;
-  // itinera los valores y crea una linked list con los valores
-  struct http_header *working_header = first_header;
-  while (raw_data[i] != '\r' || raw_data[i + 1] != '\n') {
-    j = i;
-    while (raw_data[j] != ':') {
-      j++;
+    while (i < data_len - 2 && strncmp(&raw_data[i], "\r\n", 2) != 0) {
+      i++;
     }
 
-    int k = j;
+    i += 2;
 
-    while (raw_data[k] != '\n') {
-      k++;
-    }
+    if (strncmp(&data_modifiable[i], "\r\n", 2) == 0)
+      break;
 
-    working_header->name = malloc((j - i + 1) * sizeof(char));
-    strncpy(working_header->name, &raw_data[i], j - i);
-    working_header->name[j] = '\0';
-
-    working_header->value = malloc((k - (j + 2) + 1) * sizeof(char));
-    strncpy(working_header->value, &raw_data[j + 2], k - (j + 2));
-    working_header->value[k] = '\0';
-
-    i = k + 1;
-
-    // crear un nuevo http header y cambiar los punteros
     working_header->next_header = create_header();
     working_header = working_header->next_header;
   }
 
-  // Crear la extructura
-  struct http_request parsed = {method, path, first_header, &raw_data[i + 2]};
+  char *body;
+  if (i + 2 > strlen(&data_modifiable[i])) {
+    body = &data_modifiable[i + 2];
+  } else {
+    body = "";
+  }
 
-  return parsed;
+  struct http_request *request = malloc(sizeof(struct http_request));
+  request->method = method;
+  request->path = path;
+  request->headers = first_header;
+  request->body = body;
+
+  return request;
+}
+
+void free_request(struct http_request *req) {
+  if (req == NULL) {
+    return;
+  }
+
+  struct http_header *working_header = req->headers;
+  struct http_header *next_header;
+  while (working_header != NULL) {
+    next_header = working_header->next_header;
+    free(working_header);
+    working_header = next_header;
+  }
+
+  free(req);
 }

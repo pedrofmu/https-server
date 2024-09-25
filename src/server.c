@@ -26,7 +26,6 @@ int create_srv_socket(char port[]) {
   int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 
   if (socket_fd < 0) {
-    printf("b");
     return EXIT_FAILURE;
   }
 
@@ -73,7 +72,7 @@ void configure_context(SSL_CTX *ctx) {
     exit(EXIT_FAILURE);
   }
 
-  if (SSL_CTX_use_PrivateKey_file(ctx, "key.pem", SSL_FILETYPE_PEM) <= 0) {
+  if (SSL_CTX_use_PrivateKey_file(ctx, "key.pem", SSL_FILETYPE_PEM) <= -1) {
     ERR_print_errors_fp(stderr);
     exit(EXIT_FAILURE);
   }

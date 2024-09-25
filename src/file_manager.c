@@ -7,24 +7,35 @@
 extern char *working_directory;
 
 char *obtain_file_content(char *path) {
-  size_t buffer_len = strlen(path) + strlen(working_directory) + 1;
+  // rutas vacias
+  if (path == NULL || working_directory == NULL) {
+    return NULL;
+  }
+
+  size_t buffer_len =
+      strlen(path) + strlen(working_directory) + 2; // +2 para '/' y '\0'
   char *full_path = malloc(buffer_len);
   if (full_path == NULL) {
     return NULL;
   }
 
-  snprintf(full_path, buffer_len, "%s%s", working_directory, path);
-
-  FILE *file = fopen(full_path, "r");
-  free(full_path);
-
-  if (file == NULL) {
-    return NULL;
+  // Manejo de la barra diagonal
+  if (working_directory[strlen(working_directory) - 1] != '/' &&
+      path[0] != '/') {
+    snprintf(full_path, buffer_len, "%s/%s", working_directory, path);
+  } else {
+    snprintf(full_path, buffer_len, "%s%s", working_directory, path);
   }
 
-  fseek(file, 0, SEEK_END);
+  FILE *file = fopen(full_path, "rb");
+  if (file == NULL)
+      return NULL;
+  
+  fseek(file, 0L, SEEK_END);
   long file_size = ftell(file);
   rewind(file);
+
+  free(full_path);
 
   char *file_content = (char *)malloc((file_size + 1) * sizeof(char));
   if (file_content == NULL) {
@@ -88,6 +99,7 @@ char *get_mime_type(char *filepath) {
 }
 
 int write_file(char *path, char *data) {
+  // obtiene el full path
   size_t buffer_len = strlen(path) + strlen(working_directory) + 1;
   char *full_path = malloc(buffer_len);
   if (full_path == NULL) {
@@ -96,8 +108,22 @@ int write_file(char *path, char *data) {
 
   snprintf(full_path, buffer_len, "%s%s", working_directory, path);
 
+  // abrir el archivo
   FILE *file = fopen(full_path, "w+");
+  if (file == NULL) {
+    free(full_path);
+    return -2;
+  }
 
-  fprintf(file, "%s", data);
-  return 1;
+  // escribir los datos
+  if (fprintf(file, "%s", data) < 0) {
+    fclose(file);
+    free(full_path);
+    return -3;
+  }
+
+  fclose(file);
+  free(full_path);
+
+  return 0;
 }
